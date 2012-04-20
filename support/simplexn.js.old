@@ -1,4 +1,3 @@
-
 /*!
  * simplexn
  * dimension-independent geometric kernel based on simplicial complex
@@ -194,7 +193,7 @@
     };
 
     return res;
-  };
+  }
 
   /**
    * sub
@@ -216,7 +215,7 @@
     };
 
     return res;
-  };
+  }
 
   /**
    * mul
@@ -238,7 +237,7 @@
     };
 
     return res;
-  };
+  }
 
   /**
    * scalarMul
@@ -260,7 +259,7 @@
     };
 
     return res;
-  };
+  }
 
   /**
    * scalarDiv
@@ -282,7 +281,7 @@
     };
 
     return res;
-  };
+  }
 
   /**
    * average
@@ -308,36 +307,9 @@
     res = vectorScalarDiv(length, res);
 
     return res;
-  };
+  }
 
-  /**
-   * matrix operations namespace
-   * @api public
-   */
 
-  simplexn.matrix = {};
-
-  /**
-   * identity
-   * 
-   * @param {Number} dim
-   * @api public
-   */
-
-  var matrixIdentity =
-  simplexn.matrix.identity = function (dim) {
-    var matrix = new Array(dim);
-    var i, j;
-
-    for (i = 0; i < dim; i += 1) {
-      matrix[i] = new Array(dim);
-      for(j = 0; j < dim; j += 1) {
-        matrix[i][j] = (j === i) ? 1 : 0;
-      }
-    }
-
-    return matrix;
-  };
 
   /**
    * PointSet
@@ -433,7 +405,6 @@
 
   simplexn.PointSet.prototype.set = function (point, index) {
     point = point || 0;
-    index = index || 0; // inserito in quanto generava un errore nella creazione di un cubo (can't convert NaN to an integer [Interrompi per questo errore]	this.points.set(point, index * this.rn);)
     this.points.set(point, index * this.rn);
     return this;
   };
@@ -636,7 +607,6 @@
         points[i+dims[j]] *= values[j]; 
       }
     }
-
     return this;
   };
 
@@ -839,38 +809,6 @@
   };
 
   /**
-   * invert
-   * Invert orientation of all of the cells in topology
-   * 
-   * @return {simplexn.Topology} this for chaining 
-   * @api public
-   */
-
-  simplexn.Topology.prototype.invert = function () {
-    var dim = this.dim;
-    var complex = this.complexes[dim];
-    var length = complex.length;
-    var cellSize = dim + 1;
-    var cells = [];
-    var cell;
-    var swap;
-    var i, j;
-
-    for (i = 0; i < length; i += cellSize) {
-      cell = [];
-      for (j = 0; j < cellSize; j += 1) {
-        cell.push(complex[i+j]);
-      }
-      swap = cell[0];
-      cell[0] = cell[dim];
-      cell[dim] = swap; 
-      cells.push(cell);
-    }
-
-    this._computeTopology(cells);
-  };
-
-  /**
    * clone
    * 
    * @return {simplexn.Topology} cloned topology
@@ -1067,18 +1005,7 @@
    */
 
   simplexn.SimplicialComplex.prototype.scale = function (dims, values) {
-    var invert;
-
     this.pointset.scale(dims, values);
-
-    invert = values.reduce(function (v1, v2) {
-      return v1 * v2;
-    });
-
-    if (invert < 0) {
-      this.topology.invert();
-    };
-    
     return this;
   };
 
@@ -1535,7 +1462,7 @@
       cells.unshift(d);
     }
 
-    points =  matrixIdentity(dim);
+    points =  numeric.identity(dim);
     points.unshift(points0);
 
     return new SimplicialComplex(points, [cells]);
@@ -1552,13 +1479,10 @@
   var polyline =
   simplexn.geometries.polyline = function (points) {
     var points = points || [[]];
-    var n = points.length - 1;
+    var n = points[0].length;
     var cells = [];
-    var i;
 
-    for (i = 0; i < n; i += 1) {
-      cells.push([i, i+1]);
-    }
+    while (n--) cells.unshift([n, n+1]);
 
     return (new SimplicialComplex(points, cells)).merge();
   };

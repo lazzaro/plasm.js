@@ -20,21 +20,21 @@
 	var floor = Math.floor;
 	var sqrt = Math.sqrt;
 	
-	var facetId = 0.0;
+	var facetId = 0;
+	var idVisit = 0;
 	
 	function Facet(){
 		this.id = facetId++;
 		this.neighbors = new Array();
 		this.furthestDist = 0.0;
-		this.bestPoint = new Array();
-		this.simplicial = true;
-		this.good = true;
-		this.newfacet = true;
+		this.furthestPoint = null;
 		this.vertices = new Array();
 		this.topoOriented = true;
 		this.normal = new Array();
 		this.offset = 0.0;
 		this.outsideSet = new Array();
+		this.visitId = idVisit;
+		this.visible = false;
 	};
 
 	/**
@@ -47,7 +47,7 @@
 	 * Library version.
 	 */
 
-	quickhull.version = '0.0.0';
+	quickhull.version = '0.1.0';
 
 	/**
 	 * utils namespace
@@ -74,7 +74,7 @@
 		for ( var i = 0; i < set.length && !isIn; i++) {
 			tempPoint = set[i];
 			
-			equal = comparePoints(tempPoint, point);
+			equal = (comparePoints(tempPoint, point) === 0);
 
 			if (equal) {
 				isIn = true;
@@ -96,6 +96,24 @@
 		
 		if (!isIn(set, point)) {
 			set.push(point);
+		}
+	};
+	
+	/**
+	 * Remove a point from a set - the set not contain duplicate points
+	 * 
+	 * 
+	 * @param {Array|Float32Array} set - set of points
+	 * @param {Array|Float32} point - point to remove
+	 * 
+	 */
+
+	var removePoint = quickhull._utils.removePoint = function (set, point){
+		
+		for ( var i = 0; i < set.length; i++) {
+			if ((comparePoints(set[i], point) === 0)) {
+				set.splice(i,1);
+			}
 		}
 	};
 	
@@ -256,6 +274,8 @@
 					newFacet.vertices.push(vertices[j]);
 				}
 			}
+			
+			//newFacet.vertices.sort(comparePoints);
 			newFacets.push(newFacet);
 			topoOrient = !topoOrient;
 		}
@@ -290,7 +310,7 @@
 		
 		//TODO verificare reset list
 		interiorPoint = getCenter(vertices);
-		console.log("Center: [" + interiorPoint + "]");
+		//console.log("Center: [" + interiorPoint + "]");
 		
 		setFacetPlane(newFacets[0]);
 		
@@ -319,6 +339,8 @@
 	 */
 
 	var distPlane = quickhull._utils.distPlane = function (point, facet) {
+		//console.log("Distanza punto: " + point + " dalla faccia: " + facet.id);
+		//console.log("Faccia: " + facet.id + " normale: " + facet.normal + " offset: " + facet.offset);
 		var dist = facet.offset, normal = facet.normal;
 		
 		for ( var i = 0; i < normal.length; i++) {
@@ -365,7 +387,7 @@
 		var point0 = facet.vertices[0], normal = new Array();
 		var offset, rows = new Array();
 		
-		if (point0.lenght <= 4) {
+		if (point0.length <= 4) {
 			for ( var i = 0; i < facet.vertices.length; i++) {
 				rows.push(facet.vertices[i]);
 			}
@@ -589,6 +611,18 @@
 	 */ 
 
 	var comparePoints = quickhull._utils.comparePoints = function(point1, point2) {
+		var compare = 0;
+		for ( var i = 0; i < point1.length && (compare === 0); i++) {
+			if (point1[i] > point2[i]) {
+				compare = 1;
+			} else if (point1[i] < point2[i]) {
+				compare = -1;
+			}
+		}
+		
+		return compare;
+	};
+	/*var comparePoints = quickhull._utils.comparePoints = function(point1, point2) {
 		var equal = true;
 		
 		for ( var j = 0; j < point1.length && equal; j++) {
@@ -599,6 +633,54 @@
 		}
 		
 		return equal;
+	};*/
+	
+	/**
+	 * if outside add point to facet's outside set
+	 * 
+	 * @param {Array|Float32Array} point - the point to add if outside of facet
+	 * @param {Facet} facet - the facet
+	 * @return {Number} distance of point from facet
+	 * 
+	 */
+	
+	var addOutside = quickhull._utils.addOutside = function(point, facet) {
+		var dist;
+		
+		
+		
+		dist = distPlane(point, facet);
+		
+		//TEST CASO 2D
+		/*Vy = bl[1][0] - bl[0][0];
+    	 *Vx = bl[0][1] - bl[1][1];
+    	 *return (Vx * (cpt[0] - bl[0][0]) + Vy * (cpt[1] -bl[0][1]))*/
+		
+		//var Vy = facet.vertices[1][0] - facet.vertices[0][0];
+		//var Vx = facet.vertices[0][1] - facet.vertices[1][1];
+		//dist = Vx * (point[0] - facet.vertices[0][0]) + Vy * (point[1] - facet.vertices[0][1]);
+		
+		//console.log("Distanza: " + dist + ", punto: " + pointSet[j] + ", faccia: " + facets[i].id);
+		if (dist > 0) {//TODO verificare le condizioni di punto esterno alla faccia
+			
+			if (facet.furthestPoint === null) {
+				facet.furthestPoint = point;
+				facet.furthestDist = dist;
+			} else if (dist > facet.furthestDist) {
+				facet.outsideSet.push(facet.furthestPoint);
+				facet.furthestPoint = point;
+				facet.furthestDist = dist;
+			} else {
+				facet.outsideSet.push(point);
+			}
+		}/* else if (dist === 0) {
+			pointSet.splice(i, 1);
+		}
+		if (facet.furthestPoint !== null) {
+			facets[i].furthestDist = bestDist;
+			facets[i].furthestPoint = bestPoint;
+		}*/
+		return dist;
 	};
 	
 	/**
@@ -611,10 +693,11 @@
 	 * 
 	 */ 
 	
-	var partitionAll = quickhull._utils.partitionAll = function(facets, vertices, points, numPoints) {
+	var partitionAll = quickhull._utils.partitionAll = function(facets, vertices, points) {
 		var pointSet = new Array();
 		var isVertex;
-		var bestPoint, bestDist, dist;
+		var dist;
+		
 		
 		for ( var i = 0; i < points.length; i++) {
 			isVertex = isIn(vertices, points[i]);
@@ -624,11 +707,17 @@
 		}
 		
 		for ( var i = 0; i < facets.length; i++) {
-			bestPoint = null; 
-			bestDist = 0.0;
+			//bestPoint = null; 
+			//bestDist = 0.0;
 			
 			for ( var j = 0; j < pointSet.length; j++) {
-				dist = distPlane(pointSet[j], facets[i]);
+				dist = addOutside(pointSet[j], facets[i]);
+				
+				if (dist === 0) {
+					pointSet.splice(j, 1);
+				}
+				/*dist = distPlane(pointSet[j], facets[i]);
+				//console.log("Distanza: " + dist + ", punto: " + pointSet[j] + ", faccia: " + facets[i].id);
 				if (dist > 0) {//TODO verificare le condizioni di punto esterno alla faccia
 					
 					if (bestPoint === null) {
@@ -641,14 +730,13 @@
 					} else {
 						facets[i].outsideSet.push(pointSet[j]);
 					}
-				} /*else if (dist === 0) {
-				//TODO testare profondamente metodo .splice
+				} else if (dist === 0) {
 					pointSet.splice(i, 1);
-				}*/
+				}
 				if (bestPoint !== null) {
 					facets[i].furthestDist = bestDist;
-					facets[i].bestPoint = bestPoint;
-				}
+					facets[i].furthestPoint = bestPoint;
+				}*/
 			}
 		}
 	};
@@ -662,7 +750,7 @@
 	 */ 
 	
 	var furthestNext = quickhull._utils.furthestNext = function(facets) {
-		var bestDist = bestFacet.furthestDist, bestFacet = facets[0];
+		var bestFacet = facets[0], bestDist = bestFacet.furthestDist;
 		
 		for ( var i = 1; i < facets.length; i++) {
 			if (bestDist < facets[i].furthestDist) {
@@ -671,45 +759,462 @@
 			}
 		}
 		
+		if (bestDist === 0.0) {
+			bestFacet = null;
+		}
+		
 		return bestFacet;
-		/*facetT *facet, *bestfacet= NULL;
-		  realT dist, bestdist= -REALmax;
-
-		  FORALLfacets {
-		    if (facet->outsideset) {
-		#if qh_COMPUTEfurthest
-		      pointT *furthest;
-		      furthest= (pointT*)qh_setlast(facet->outsideset);
-		      zinc_(Zcomputefurthest);
-		      qh_distplane(furthest, facet, &dist);
-		#else
-		      dist= facet->furthestdist;
-		#endif
-		      if (dist > bestdist) {
-		        bestfacet= facet;
-		        bestdist= dist;
-		      }
-		    }
-		  }
-		  if (bestfacet) {
-		    qh_removefacet(bestfacet);
-		    qh_prependfacet(bestfacet, &qh facet_next);
-		    trace1((qh ferr, 1029, "qh_furthestnext: made f%d next facet(dist %.2g)\n",
-		            bestfacet->id, bestdist));
-		  }*/
+	};
+	
+	/**
+	 * given a visible facet, find the point's horizon and visible facets for all facets
+	 * 
+	 * @param {Array} point - the point to find horizon
+	 * @param {Facet} facet - the first facet
+	 * @return {Array|Facet} the visible facets
+	 * 
+	 */ 
+	
+	var findHorizon = quickhull._utils.findHorizon = function(point, facet) {
+		idVisit++;
+		var visible = new Array();
+		var tmpNeighbors, neighbor, dist;
+		
+		facet.visitId = idVisit;
+		facet.visible = true;
+		
+		visible.push(facet);
+		
+		for ( var i = 0; i < visible.length; i++) {
+			tmpNeighbors = visible[i].neighbors;
+			
+			for ( var j = 0; j < tmpNeighbors.length; j++) {
+				neighbor = tmpNeighbors[j];
+				if (neighbor.visitId !== idVisit) {
+					neighbor.visitId = idVisit;
+					dist = distPlane(point, neighbor);
+					if (false && dist > 0) {
+						neighbor.visible = true;
+						visible.push(neighbor);
+						
+					}
+					//TODO ramo else gestione coplanare 
+				}
+			}
+		}
+		
+		return visible;
+	};
+	
+	/**
+	 * return vertices for intersection of two simplicial facets
+	 * 
+	 * @param {Facet} facetA - first facet
+	 * @param {Facet} facetB - second facet
+	 * @return {Array|Float32Array} the vertices of interserction
+	 * 
+	 */ 
+	
+	var facetIntersect = quickhull._utils.facetIntersect = function(facetA, facetB) {
+		var intersection = new Array();
+		var verticesA = facetA.vertices;
+		var verticesB = facetB.vertices;
+		var tmpVertex;
+		
+		for ( var i = 0; i < verticesA.length; i++) {
+			tmpVertex = verticesA[i];
+			
+			if(isIn(verticesB, tmpVertex)){
+				intersection.push(tmpVertex);
+			}
+		}
+		
+		return intersection;
+	};
+	
+	/**
+	 * make new facets for simplicial visible facet and apex
+	 * 
+	 * @param {Array} point - the point
+	 * @param {Facet} visible - facet visible form point
+	 * @return {Array|Facet} the new facets
+	 * 
+	 */ 
+	
+	var makeNewSimplicial = quickhull._utils.makeNewSimplicial = function(apex, visible) {
+		var tmpNeighbors = visible.neighbors;
+		var neighbor, newFacet;
+		var apexArr = new Array(), tmpVertices, vertices, newFacets = new Array();
+		apexArr.push(apex);
+				
+		for ( var i = 0; i < tmpNeighbors.length; i++) {
+			neighbor = tmpNeighbors[i];
+			if (!(neighbor.visible)) {
+				tmpVertices = facetIntersect(neighbor, visible);
+				vertices = apexArr.concat(tmpVertices);
+								
+				newFacet = new Facet(); //TODO gestire topoOrient
+				newFacet.vertices = vertices;
+				newFacet.neighbors.push(neighbor);
+				
+				if (!neighbor.topoOriented) {
+					newFacet.topoOriented = false;
+				}
+				
+				neighbor.neighbors.push(newFacet);//inserito in fase di test
+				
+				newFacets.push(newFacet);
+			}
+		}
+		
+		return newFacets;
+	};
+	
+	/**
+	 * make new facets from point
+	 * 
+	 * @param {Array} point - the point
+	 * @param {Array|Facet} visible - facets visible form point
+	 * @return {Array|Facet} the new facets
+	 * 
+	 */ 
+	
+	var makeNewFacets = quickhull._utils.makeNewFacets = function(point, visible) {
+		
+		var newFacets = new Array(), tmpFacets;
+		
+		for ( var i = 0; i < visible.length; i++) {
+			tmpFacets = makeNewSimplicial(point, visible[i]);
+			
+			newFacets = newFacets.concat(tmpFacets);
+		}
+		
+		return newFacets;
+	};
+	
+	/**
+	 * make new hyperplanes for new facets
+	 * 
+	 * @param {Array|Facet} newFacets - the new facets
+	 * 
+	 */ 
+	
+	var makeNewPlanes = quickhull._utils.makeNewPlanes = function(newFacets) {
+		
+		for ( var i = 0; i < newFacets.length; i++) {
+			//TODO gestire mergehorizon
+			setFacetPlane(newFacets[i]);
+		}
+	};
+	
+	/**
+	 * match newfacets to their newfacet neighbors
+	 * 
+	 * @param {Array|Facet} newFacets - the new facets
+	 * 
+	 */ 
+	
+	var matchNewFacets = quickhull._utils.matchNewFacets = function(newFacets) {
+		var tmpVerticesA, tmpVerticesB, tmpVert, vertCom, intersect;
+		var dim = newFacets[0].vertices[0].length;
+		/*for ( var i = 0; i < newFacets.length; i++) {
+			tmpVerticesA = newFacets[i].vertices;
+			for ( var j = 0; j < newFacets.length; j++) {
+				if (j !== i) {
+					vertCom = 1;
+					tmpVerticesB = newFacets[j].vertices;
+					
+					for ( var k = 1; k < tmpVerticesA.length; k++) {
+						tmpVert = tmpVerticesA[k];
+						if (isIn(tmpVerticesB, tmpVert)) {
+							vertCom++;
+						}
+					}
+					
+					if (vertCom > 1 && newFacets[i].neighbors[0].id !== newFacets[j].id) {
+						newFacets[i].neighbors.push(newFacets[j]);
+					}
+				}
+			}
+		}*/
+		for ( var i = 0; i < newFacets.length; i++) {
+			for ( var j = 0; j < newFacets.length; j++) {
+				if (j !== i) {
+					intersect = facetIntersect(newFacets[i], newFacets[j]);
+					
+					if (intersect.length === dim -1) {
+						newFacets[j].topoOriented = !newFacets[i].topoOriented;
+						newFacets[i].neighbors.push(newFacets[j]);
+					}
+				}
+			}
+		}
+	};
+	
+	/**
+	 * update vertices' set
+	 * 
+	 * @param {Array|Float32Array} currentVertices - the current set of vertices
+	 * @param {Array|Facet} visible - the facets visible from new vertex
+	 * @param {Array|Facet} newFacets - the new facets
+	 * 
+	 */ 
+	
+	var updateVertices = quickhull._utils.updateVertices = function(currentVertices, visible, newFacets) {
+		var visibleVertices = new Array();
+		var newFacetVertices = new Array();
+		
+		for ( var i = 0; i < visible.length; i++) {
+			for ( var j = 0; j < visible[i].vertices.length; j++) {
+				addNoDup(visibleVertices, visible[i].vertices[j]);
+			}
+		}
+		//console.log("Vertici visibili");
+		//console.log(visibleVertices);
+		
+		for ( var i = 0; i < newFacets.length; i++) {
+			for ( var j = 0; j < newFacets[i].vertices.length; j++) {
+				addNoDup(newFacetVertices, newFacets[i].vertices[j]);
+			}
+		}
+		//console.log("Vertici nuove facce");
+		//console.log(newFacetVertices);
+		
+		for ( var i = 0; i < visibleVertices.length; i++) {
+			if (!isIn(newFacetVertices, visibleVertices[i])) {
+				removePoint(currentVertices, visibleVertices[i]);
+			}
+		}
+		
+		
+	};
+	
+	/**
+	 * partitions points in visible facets to new facets
+	 * 
+	 * @param {Array|Facet} visible - the facets visible from new vertex
+	 * @param {Array|Facet} newFacets - the new facets
+	 * @param {Array} newVertex - the new vertex added to the hull
+	 * 
+	 */ 
+	
+	var partitionVisible = quickhull._utils.partitionVisible = function(visible, newFacets, newVertex) {
+		// insieme di tutti i punti esterni, senza ripetizioni, delle facce visibili dal nuovo vertice inserito
+		var outsidePoints = new Array();
+		var tmpOutside;
+		var dist;
+		
+		for ( var i = 0; i < visible.length; i++) {
+			if (visible[i].furthestPoint !== null && (comparePoints(newVertex, visible[i].furthestPoint) !== 0)) {
+				addNoDup(outsidePoints, visible[i].furthestPoint);
+			}
+			
+			tmpOutside = visible[i].outsideSet;
+			
+			for ( var j = 0; j < tmpOutside.length; j++) {
+				addNoDup(outsidePoints, tmpOutside[j]);
+			}
+		}
+		
+		for ( var i = 0; i < newFacets.length; i++) {
+			for ( var j = 0; j < outsidePoints.length; j++) {
+				dist = addOutside(outsidePoints[j], newFacets[i]);
+				
+				// se il punto non è al di sopra della faccia è interno o appartenente al guscio convesso
+				if (dist < 0) { //TODO ricontrollare le condizioni di appartenenza alla faccia
+					outsidePoints.splice(j, 1);
+				}
+			}
+		}
+		
+	};
+	
+	/**
+	 * remove visible facets from current convex hull
+	 * 
+	 * @param {Array|Facet} currentHull - the facet to add point
+	 * @param {Array|Facet} visible - set of visible facet
+	 */ 
+	
+	var deleteVisible = quickhull._utils.deleteVisible = function(currentHull, visible) {
+		var tmpNeighbors;
+		
+		for ( var i = 0; i < currentHull.length; i++) {
+			if (currentHull[i].visible) {// se è visibile viene eliminta dal guscio
+				currentHull.splice(i,1);
+				i = i -1;
+			} else {// altrimenti vengono eliminati tutti i vicini visibili
+				tmpNeighbors = currentHull[i].neighbors;
+				for ( var j = 0; j < tmpNeighbors.length; j++) {
+					if (tmpNeighbors[j].visible) {// se è visibile viene eliminta dal guscio
+						tmpNeighbors.splice(j,1);
+						j = j -1;
+					}
+				}
+			}
+		}
+		
+		
+	};
+	
+	/**
+	 * add point (usually furthest point) above facet to hull
+	 * 
+	 * @param {Facet} facet - the facet to add point
+	 * @param {Array|Facet} currentHull - the current hull
+	 * @param {Array|Float32Array} currentVertices - the current vertices of the current hull
+	 * 
+	 */ 
+	
+	var addPoint = quickhull._utils.addPoint = function(facet, currentHull, currentVertices) {
+		var vertex = facet.furthestPoint;
+		
+		var horizon = findHorizon(vertex, facet);
+		
+		/*console.log("Horizon: " + horizon);
+		for ( var i = 0; i < horizon.length; i++) {
+			console.log("[id: " + horizon[i].id + "]");
+		}*/
+		
+		var newFacets = makeNewFacets(vertex, horizon);
+		
+		for ( var i = 0; i < newFacets.length; i++) {
+			plotBaseLine(newFacets[i].vertices,'rgb(0,0,180)');
+			//console.log("[id: " + convexHull[i].id 
+			//		  + " distanza massima: " + convexHull[i].furthestDist 
+			//		  + " punto più distante: " + convexHull[i].furthestPoint 
+			//		  + " visible: " + convexHull[i].visible
+			//		  + " vertici: " + convexHull[i].vertices 
+			//		  + " normale: " + convexHull[i].normal + "]");
+		}
+		
+		matchNewFacets(newFacets);
+		
+		makeNewPlanes(newFacets);
+		/*console.log("New facets: " + newFacets);
+		for ( var i = 0; i < newFacets.length; i++) {
+			console.log("{id: " + newFacets[i].id + "\n vertices: ");
+			for ( var j = 0; j < newFacets[i].vertices.length; j++) {
+				console.log(newFacets[i].vertices[j]);
+			}
+			console.log("normal: " + newFacets[i].normal);
+			console.log("neighbors: " );
+			for ( var j = 0; j < newFacets[i].neighbors.length; j++) {
+				console.log(newFacets[i].neighbors[j].id);
+			}
+			console.log("}");
+		}*/
+		
+		/*console.log("Current vertices 0: ");
+		console.log(currentVertices);*/
+		
+		currentVertices.push(vertex);
+		
+		/*console.log("Current vertices 1: ");
+		console.log(currentVertices);*/
+		updateVertices(currentVertices, horizon, newFacets);
+		/*console.log("Current vertices 2: ");
+		console.log(currentVertices);*/
+		
+		/*console.log("Insiemi esterni nuove facce 1: ");
+		for ( var i = 0; i < newFacets.length; i++) {
+			console.log("{id: " + newFacets[i].id + "\n vertices: ");
+			//for ( var j = 0; j < newFacets[i].vertices.length; j++) {
+			//	console.log(newFacets[i].vertices[j]);
+			//}
+			//console.log("normal: " + newFacets[i].normal);
+			//console.log("neighbors: " );
+			//for ( var j = 0; j < newFacets[i].neighbors.length; j++) {
+			//	console.log(newFacets[i].neighbors[j].id);
+			//}
+			console.log("punto più lontano: [" + newFacets[i].furthestPoint + "], distanza: " + newFacets[i].furthestDist);
+			console.log("punti esterni: " );
+			for ( var j = 0; j < newFacets[i].outsideSet.length; j++) {
+				console.log(newFacets[i].outsideSet[j]);
+			}
+			console.log("}");
+		}*/
+		
+		partitionVisible(horizon, newFacets, vertex);
+		
+		/*console.log("Insiemi esterni nuove facce 2: ");
+		for ( var i = 0; i < newFacets.length; i++) {
+			console.log("{id: " + newFacets[i].id + "\n vertices: ");
+			//for ( var j = 0; j < newFacets[i].vertices.length; j++) {
+			//	console.log(newFacets[i].vertices[j]);
+			//}
+			//console.log("normal: " + newFacets[i].normal);
+			//console.log("neighbors: " );
+			//for ( var j = 0; j < newFacets[i].neighbors.length; j++) {
+			//	console.log(newFacets[i].neighbors[j].id);
+			//}
+			console.log("punto più lontano: [" + newFacets[i].furthestPoint + "], distanza: " + newFacets[i].furthestDist);
+			console.log("punti esterni: " );
+			for ( var j = 0; j < newFacets[i].outsideSet.length; j++) {
+				console.log(newFacets[i].outsideSet[j]);
+			}
+			console.log("}");
+		}*/
+		
+		/*console.log("Guscio convesso corrente 1: ");
+		for ( var i = 0; i < currentHull.length; i++) {
+			console.log("{id: " + currentHull[i].id + "\n visibile: " + currentHull[i].visible);
+			//for ( var j = 0; j < currentHull[i].vertices.length; j++) {
+			//	console.log(currentHull[i].vertices[j]);
+			//}
+			//console.log("normal: " + currentHull[i].normal);
+			//console.log("neighbors: " );
+			//for ( var j = 0; j < currentHull[i].neighbors.length; j++) {
+			//	console.log(currentHull[i].neighbors[j].id);
+			//}
+			//console.log("punto più lontano: [" + currentHull[i].furthestPoint + "], distanza: " + currentHull[i].furthestDist);
+			//console.log("punti esterni: " );
+			//for ( var j = 0; j < currentHull[i].outsideSet.length; j++) {
+			//	console.log(currentHull[i].outsideSet[j]);
+			//}
+			
+			console.log("}");
+		}*/
+		
+		deleteVisible(currentHull);
+		
+		/*console.log("Guscio convesso corrente 2: ");
+		for ( var i = 0; i < currentHull.length; i++) {
+			console.log("{id: " + currentHull[i].id + "\n visibile: " + currentHull[i].visible);
+			//for ( var j = 0; j < currentHull[i].vertices.length; j++) {
+			//	console.log(currentHull[i].vertices[j]);
+			//}
+			//console.log("normal: " + currentHull[i].normal);
+			//console.log("neighbors: " );
+			//for ( var j = 0; j < currentHull[i].neighbors.length; j++) {
+			//	console.log(currentHull[i].neighbors[j].id);
+			//}
+			//console.log("punto più lontano: [" + currentHull[i].furthestPoint + "], distanza: " + currentHull[i].furthestDist);
+			//console.log("punti esterni: " );
+			//for ( var j = 0; j < currentHull[i].outsideSet.length; j++) {
+			//	console.log(currentHull[i].outsideSet[j]);
+			//}
+			
+			console.log("}");
+		}*/
+		
+		//aggiung le nuove facce al guscio
+		for ( var i = 0; i < newFacets.length; i++) {
+			currentHull.push(newFacets[i]);
+		}
 	};
 	
 	/**
 	 * Algorithm for convex hull computing
 	 * 
 	 * @param {Array|Float32Array} points - set of points with the same dimension
-	 * @return {Array|Float32Array} convexHull
+	 * @return {Array|Facet} convexHull
 	 * 
 	 */ 
 
 	var quickhull = quickhull.quickhull = function(points) {
 		//TODO verifica punti tutti della stessa dimensione
-
+		
 		var numPoints = points.length;
 		var dim = points[0].length;
 
@@ -720,10 +1225,12 @@
 		var convexHull = new Array();
 		var maxCoord = -Infinity, minCoord = Infinity, maxDet, det;
 		var maxX, minX, maxPoint;
-		var initHull;
 		var nextFacet;
 
-		console.log("Inizio calcolo convex hull con i punti: " + points);
+		/*console.log("Inizio calcolo convex hull con i punti:");
+		for ( var i = 0; i < points.length; i++) {
+			console.log(points[i]);
+		}*/
 
 		// costruzione insiemi max min per ogni dimesione
 		for ( var i = 0; i < dim; i++) {
@@ -813,13 +1320,15 @@
 			}
 
 			//TODO gestire il caso in cui maxPoint non viene trovato
-			simlpex = addNoDup(simplex, maxPoint);
+			if (maxPoint !== null) {
+				addNoDup(simplex, maxPoint);
+			}
 		}
 		
-		/*console.log("Simplesso/vertici iniziale/i: ");
+		console.log("Simplesso/vertici iniziale/i: ");
 		for ( var i = 0; i < simplex.length; i++) {
 			console.log("[" + simplex[i] + "]");
-		}*/
+		}
 		
 		for ( var i = 0; i < simplex.length; i++) {
 			vertices[i] = new Array();
@@ -827,12 +1336,56 @@
 				vertices[i][j] = simplex[i][j];
 			}
 		}
+		//vertices.sort(comparePoints);
+		convexHull = initialHull(vertices);
+		//console.log("initial hull: " + convexHull);
+		for ( var i = 0; i < convexHull.length; i++) {
+			plotBaseLine(convexHull[i].vertices,'rgb(180,180,180)');
+			//console.log("[id: " + convexHull[i].id 
+			//		  + " distanza massima: " + convexHull[i].furthestDist 
+			//		  + " punto più distante: " + convexHull[i].furthestPoint 
+			//		  + " visible: " + convexHull[i].visible
+			//		  + " vertici: " + convexHull[i].vertices 
+			//		  + " normale: " + convexHull[i].normal + "]");
+		}
 		
-		initHull = initialHull(vertices);
+		partitionAll(convexHull, vertices, points);
 		
-		partitionAll(vertices, points, numPoints);
+		/*console.log("initial hull: " + convexHull);
+		for ( var i = 0; i < convexHull.length; i++) {
+			console.log("[id: " + convexHull[i].id + " distanza massima: " + convexHull[i].furthestDist + " punto più distante: " + convexHull[i].furthestPoint + "]");
+		}*/
 		
-		nextFacet = furthestNext(initHull);
+		nextFacet = furthestNext(convexHull);
+		
+		//console.log("Next facet: " + nextFacet.id);
+		
+		while (nextFacet !== null) {
+			qhPlotPoints(points);
+			
+			for ( var i = 0; i < convexHull.length; i++) {
+				plotBaseLine(convexHull[i].vertices,'rgb(180,180,180)');
+				//plotBaseLine([[convexHull[i].normal[0] + convexHull[i].offset, convexHull[i].normal[1] + convexHull[i].offset], 
+				//              [(convexHull[i].vertices[0][0] + convexHull[i].vertices[1][0])/2, (convexHull[i].vertices[0][1] + convexHull[i].vertices[1][1])/2]],'rgb(255,0,0)');
+				//plotBaseLine([[convexHull[i].normal[0] + convexHull[i].offset, convexHull[i].normal[1] + convexHull[i].offset], convexHull[i].vertices[1]],'rgb(255,0,0)');
+			}
+			
+			plotBaseLine(nextFacet.vertices,'rgb(0,255,0)');
+			addPoint(nextFacet, convexHull, vertices);
+			
+			nextFacet = furthestNext(convexHull);
+		}
+		console.log("convex hull: " + convexHull);
+		for ( var i = 0; i < convexHull.length; i++) {
+			console.log("[id: " + convexHull[i].id 
+					  + " distanza massima: " + convexHull[i].furthestDist 
+					  + " punto più distante: " + convexHull[i].furthestPoint 
+					  + " visible: " + convexHull[i].visible
+					  + " vertici: " + convexHull[i].vertices + "]");
+		}
+		
+		console.log("Vertici: ");
+		console.log(vertices);
 
 		return convexHull;
 	};

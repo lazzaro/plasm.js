@@ -32,6 +32,31 @@ function getRandomPoints2D(numPoint, xMax, yMax) {
     return points;
 }
 
+function random2D(numPoints, maxX, maxY) {
+	var points = new Array();
+
+	for ( var i = 0; i < numPoints; i++) {
+		
+		points.push([Math.floor(Math.random() * maxX) * Math.pow(-1, Math.round(Math.random())), 
+		             Math.floor(Math.random() * maxY) * Math.pow(-1, Math.round(Math.random()))]);
+	}
+	
+	return points;
+}
+
+function random3D(numPoints, maxX, maxY, maxZ) {
+	var points = new Array();
+
+	for ( var i = 0; i < numPoints; i++) {
+		
+		points.push([Math.random() * maxX * Math.pow(-1, Math.round(Math.random())), 
+		             Math.random() * maxY * Math.pow(-1, Math.round(Math.random())),
+		             Math.random() * maxZ * Math.pow(-1, Math.round(Math.random()))]);
+	}
+	
+	return points;
+}
+
 function qhPlotPoints(pts) {
     ctx = document.getElementById('qh_demo').getContext('2d');
     ctx.clearRect(0,0,400,400);

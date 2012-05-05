@@ -17,6 +17,8 @@
 	var idVisit = 0; // id di visita per identificare la singola iterazione
 	
 	var displayGlob = 0;
+	var logGlob = 0;
+	var steps;
 	
 	// Oggetto per la memorizzazione della struttura della singola faccia
 	function Facet(){
@@ -258,17 +260,34 @@
 		var newFacet;
 		var interiorPoint;
 		var dist;
+		var cells, cell, conv;
+		
+		if (displayGlob === 2) {
+			cells = new Array();
+		}
 		
 		interiorPoint = getCenter(vertices);
 		
 		for ( var i = 0; i < vertices.length; i++) {
 			newFacet = new Facet();
 			
+			if (displayGlob === 2) {
+				cell = new Array();
+			}
+			
 			for ( var j = 0; j < vertices.length; j++) {
 				var k = (vertices.length - 1 - i);
 				if (j != k) {
 					newFacet.vertices.push(vertices[j]);
+					
+					if (displayGlob === 2) {
+						cell.push(j);
+					}
 				}
+			}
+			
+			if (displayGlob === 2) {
+				cells.push(cell);
 			}
 			
 			newFacets.push(newFacet);
@@ -285,6 +304,11 @@
 				newFacet.topoOriented = false;
 			}
 		}
+		
+		/*if (displayGlob === 2) {
+			conv = SIMPLICIAL_COMPLEX(vertices)(cells);
+			steps.push(STRUCT([COLOR([1,1,1,0.5])(conv), COLOR([0,0,0])(SKELETON(1)(conv))]));
+		}*/
 		
 		for ( var i = 0; i < newFacets.length; i++) {
 			newFacet = newFacets[i];
@@ -933,7 +957,21 @@
 		
 		var horizon = findHorizon(vertex, facet);
 		
+		if (displayGlob === 2) {
+			for ( var i = 1; i < horizon.length; i++) {
+				simplPlasm = SIMPLICIAL_COMPLEX(horizon[i].vertices)([[0,1,2]]);
+				steps.push(STRUCT([steps[steps.length - 1], COLOR([0,0,0])(SKELETON(1)(simplPlasm)), COLOR([1,0,0,0.8])(simplPlasm)]));
+			}
+		}
+		
 		var newFacets = makeNewFacets(vertex, horizon);
+		
+		if (displayGlob === 2) {
+			for ( var i = 0; i < newFacets.length; i++) {
+				simplPlasm = SIMPLICIAL_COMPLEX(newFacets[i].vertices)([[0,1,2]]);
+				steps.push(STRUCT([steps[steps.length - 1], COLOR([0,0,0])(SKELETON(1)(simplPlasm)), COLOR([0,0,1,0.8])(simplPlasm)]));
+			}
+		}
 		
 		if (displayGlob === 1 || displayGlob === 3 ) {
 			// disegno delle nuove facce su canvas
@@ -960,21 +998,43 @@
 	};
 	
 	/**
+	 * calculate the cell's facet for plasm's SIMPLICIAL_COMPLEX from global vertices
+	 * 
+	 * @param {Array|Float32Array} vertices - the current vertices
+	 * @param {Array|Facet} visible - set of visible facets
+	 * @return {Array|Float32Array} the vertices global index of facet
+	 */ 
+	
+	var cellsPlasm = quickhull._utils.cellPlasm = function(vertices, facets) {
+		var tmpVertices;
+		var cells = new Array();
+		for ( var i = 0; i < facets.length; i++) {
+			tmpVertices = facets[i].vertices;
+			cells.push([]);
+			for ( var j = 0; j < tmpVertices.length; j++) {
+				for ( var k = 0; k < vertices.length; k++) {
+					if ((comparePoints(vertices[k], tmpVertices[j]) === 0)) {
+						cells[i].push(k);
+					}
+				}
+			}
+		}
+
+		return cells;
+	};
+	
+	/**
 	 * Algorithm for convex hull computing
 	 * 
 	 * @param {Array|Float32Array} points - set of points with the same dimension
-	 * @param {Number} display - [0|1|2|3] number for draw convex hull: 0 nothing, 1 canvas, 2 plasm, 3 canvas & plasm
+	 * @param {Number} display - 0|1|2|3 number for draw convex hull: 0 nothing, 1 canvas, 2 plasm step by step, 3 canvas & plasm
+	 * @param {Number} log - 0|1 number for log print
 	 * @return {Array|Facet} convexHull
 	 * 
 	 */ 
 
-	var quickhull = quickhull.quickhull = function(points, display) {
+	var quickhull = quickhull.quickhull = function(points, display, log) {
 		//TODO verifica punti tutti della stessa dimensione
-		
-		if (display !== undefined) {
-			displayGlob = display;
-		}
-		
 		var numPoints = points.length;
 		var dim = points[0].length;
 
@@ -985,6 +1045,19 @@
 		var maxCoord = -Infinity, minCoord = Infinity, maxDet, det;
 		var maxX, minX, maxPoint;
 		var nextFacet;
+		var simplPlasm;
+		
+		if (display !== undefined) {
+			displayGlob = display;
+		}
+		
+		if (log !== undefined) {
+			logGlob = log;
+		}
+		
+		if (displayGlob === 2) {
+			steps = new Array();
+		}
 		
 		// costruzione insiemi max min per ogni dimensione
 		for ( var i = 0; i < dim; i++) {
@@ -1065,9 +1138,11 @@
 			}
 		}
 		
-		console.log("Simplesso/vertici iniziale/i: ");
-		for ( var i = 0; i < vertices.length; i++) {
-			console.log("[" + vertices[i] + "]");
+		if (logGlob === 1) {
+			console.log("Simplesso/vertici iniziale/i: ");
+			for ( var i = 0; i < vertices.length; i++) {
+				console.log("[" + vertices[i] + "]");
+			}
 		}
 		
 		convexHull = initialHull(vertices);
@@ -1085,6 +1160,16 @@
 		
 		while (nextFacet !== null) {
 			
+			if (displayGlob === 2) {
+				simplPlasm = SIMPLICIAL_COMPLEX(vertices)(cellsPlasm(vertices,convexHull));
+				steps.push(STRUCT([COLOR([1,1,1,0.5])(simplPlasm), COLOR([0,0,0])(SKELETON(1)(simplPlasm))]));
+			}
+			
+			if (displayGlob === 2) {
+				simplPlasm = SIMPLICIAL_COMPLEX(nextFacet.vertices)([[0,1,2]]);
+				steps.push(STRUCT([steps[steps.length - 1], COLOR([0,0,0])(SKELETON(1)(simplPlasm)), COLOR([1,0,0,0.8])(simplPlasm)]));
+			}
+			
 			if (displayGlob === 1 || displayGlob === 3 ) {
 				// disegno del guscio corrente su canvas e dalla faccia con il punto più lontano
 				qhPlotPoints(points);
@@ -1099,12 +1184,23 @@
 			addPoint(nextFacet, convexHull, vertices);
 			
 			nextFacet = furthestNext(convexHull);
+			
+			
 		}
 		
-		console.log("Vertici: ");
-		console.log(vertices);
-
-		return convexHull;
+		if (logGlob === 1) {
+			console.log("Vertici: ");
+			console.log(vertices);
+		}
+		
+		if (displayGlob === 2) {
+			simplPlasm = SIMPLICIAL_COMPLEX(vertices)(cellsPlasm(vertices,convexHull));
+			steps.push(STRUCT([COLOR([0,1,0,0.5])(simplPlasm), COLOR([0,0,0])(SKELETON(1)(simplPlasm))]));
+		}
+		
+		return {vertices:vertices,facets:convexHull,steps:steps};
 	};
+	
+	
 
 }(this));

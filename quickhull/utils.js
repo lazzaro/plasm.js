@@ -57,6 +57,45 @@ function random3D(numPoints, maxX, maxY, maxZ) {
 	return points;
 }
 
+function random4D(numPoints, maxX, maxY, maxZ, maxW) {
+	var points = new Array();
+
+	for ( var i = 0; i < numPoints; i++) {
+		
+		points.push([Math.random() * maxX * Math.pow(-1, Math.round(Math.random())), 
+		             Math.random() * maxY * Math.pow(-1, Math.round(Math.random())),
+		             Math.random() * maxZ * Math.pow(-1, Math.round(Math.random())),
+		             Math.random() * maxW * Math.pow(-1, Math.round(Math.random()))]);
+	}
+	
+	return points;
+}
+
+function convHullToPlasm(vertices, facets) {
+	var tmpVertices;
+	var cells = new Array();
+	for ( var i = 0; i < facets.length; i++) {
+		tmpVertices = facets[i].vertices;
+		cells.push([]);
+		for ( var j = 0; j < tmpVertices.length; j++) {
+			for ( var k = 0; k < vertices.length; k++) {
+				if ((quickhull._utils.comparePoints(vertices[k], tmpVertices[j]) === 0)) {
+					cells[i].push(k);
+				}
+			}
+		}
+	}
+
+	return cells;
+}
+
+function schlegel3D(d) {
+	return function(point){
+		var denominator = point[3]/d;
+		return [point[0]/denominator, point[1]/denominator, point[2]/denominator];
+	};
+}
+
 function qhPlotPoints(pts) {
     ctx = document.getElementById('qh_demo').getContext('2d');
     ctx.clearRect(0,0,400,400);

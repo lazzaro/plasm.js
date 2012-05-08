@@ -67,7 +67,9 @@
   
   var steps = new Array();
   
-  var points = random3D(30, 2, 2, 2);
+  var points = random3D(20, 2, 2, 2);
+	  
+  //[[-10],[-5],[2],[8],[4],[3],[7]];//[[0,0,0,0],[1,0,0,0],[0,1,0,0],[1,1,0,0],[0,0,1,0],[1,0,1,0],[0,1,1,0],[1,1,1,0],[0,0,0,1],[1,0,0,1],[0,1,0,1],[1,1,0,1],[0,0,1,1],[1,0,1,1],[0,1,1,1],[1,1,1,1]];//[[0,0,0],[1,0,0],[0,1,0],[1,1,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1]];//
   
   var cells = new Array();
 
@@ -79,13 +81,7 @@
   
   var convexHull = quickhull.quickhull(points, 2);
   
-  steps = convexHull.steps;
-  
-  //DRAW(COLOR([0,0,0])(SKELETON(0)(CUBE([3]))));
-  //steps.push(COLOR([0,0,0])(CUBE([3])));
-  //steps.push(COLOR([1,1,1])(CUBE([3])));
-  //steps.push(COLOR([0,1,0])(CUBE([3])));
-  
+  steps = convexHull.steps;  
   </script>
 </body>
 </html>

@@ -21,13 +21,15 @@ function getRandomPoints2D(numPoint, xMax, yMax) {
     for (var i = 0; i < numPoint/2; i++) {
         var r =  Math.random()*xMax/4;
         var theta = Math.random() * 1.5 * Math.PI + phase;
-        points.push( [ xMax /4 + r * Math.cos(theta), yMax/2 + 2 * r * Math.sin(theta)] );
+        points.push( [ (xMax /4 + r * Math.cos(theta)) * Math.pow(-1, Math.round(Math.random())), 
+                       (yMax/2 + 2 * r * Math.sin(theta)) * Math.pow(-1, Math.round(Math.random()))] );
     }
     var phase = Math.random() * Math.PI * 2;
     for (var i = 0; i < numPoint/2; i++) {
         var r =  Math.random()*xMax/4;
         var theta = Math.random() * 1.5 * Math.PI + phase;
-        points.push( [ xMax /4 * 3 +  r * Math.cos(theta), yMax/2 +  r * Math.sin(theta)] );
+        points.push( [ (xMax /4 * 3 +  r * Math.cos(theta))* Math.pow(-1, Math.round(Math.random())), 
+                       (yMax/2 +  r * Math.sin(theta))* Math.pow(-1, Math.round(Math.random()))] );
     }
     return points;
 }
@@ -71,6 +73,20 @@ function random4D(numPoints, maxX, maxY, maxZ, maxW) {
 	return points;
 }
 
+function random4DPos(numPoints, maxX, maxY, maxZ, maxW) {
+	var points = new Array();
+
+	for ( var i = 0; i < numPoints; i++) {
+		
+		points.push([Math.floor(Math.random() * maxX) + 1, 
+		             Math.floor(Math.random() * maxY) + 1,
+		             Math.floor(Math.random() * maxZ) + 1,
+		             Math.floor(Math.random() * maxW) + 1]);
+	}
+	
+	return points;
+}
+
 function convHullToPlasm(vertices, facets) {
 	var tmpVertices;
 	var cells = new Array();
@@ -88,6 +104,21 @@ function convHullToPlasm(vertices, facets) {
 
 	return cells;
 }
+
+var toCells = function(vertices, facets) {
+	var cells = new Array();
+	facets.forEach(function(facet, i){
+		cells.push([]);
+		vertices.forEach(function(vertex,j){
+			facet.vertices.forEach(function(facetVert,k){
+				if ((quickhull._utils.comparePoints(facetVert, vertex) === 0)) {
+					cells[i].push(j);
+				}
+			});
+		});
+	});
+	return cells;
+};
 
 function schlegel3D(d) {
 	return function(point){
@@ -127,3 +158,22 @@ function plotBaseLine(baseLine,color) {
     ctx.stroke();
     ctx.restore();
 } 
+
+Array.prototype.shuffle = function() {
+	for(var j, x, i = this.length; i; j = Math.floor(Math.random() * i), x = this[--i], this[i] = this[j], this[j] = x);
+};
+
+Array.prototype.mix = function() {
+	var ret = new Array();
+	while (this[0]) {
+		ret.push(
+			this.splice(
+				parseInt(Math.random()*this.length),
+				1)[0]
+			);
+	}
+	while (ret[0]) {
+		this.push(ret.shift());
+	}
+	return this;
+};

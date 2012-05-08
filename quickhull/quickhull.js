@@ -305,11 +305,6 @@
 			}
 		}
 		
-		/*if (displayGlob === 2) {
-			conv = SIMPLICIAL_COMPLEX(vertices)(cells);
-			steps.push(STRUCT([COLOR([1,1,1,0.5])(conv), COLOR([0,0,0])(SKELETON(1)(conv))]));
-		}*/
-		
 		for ( var i = 0; i < newFacets.length; i++) {
 			newFacet = newFacets[i];
 			for ( var j = 0; j < newFacets.length; j++) {
@@ -959,7 +954,8 @@
 		
 		if (displayGlob === 2) {
 			for ( var i = 1; i < horizon.length; i++) {
-				simplPlasm = SIMPLICIAL_COMPLEX(horizon[i].vertices)([[0,1,2]]);
+				//simplPlasm = SIMPLICIAL_COMPLEX(horizon[i].vertices)([[0,1,2]]);
+				simplPlasm = SIMPLICIAL_COMPLEX(horizon[i].vertices)(cellsPlasm(horizon[i].vertices,[horizon[i]]));
 				steps.push(STRUCT([steps[steps.length - 1], COLOR([0,0,0])(SKELETON(1)(simplPlasm)), COLOR([1,0,0,0.8])(simplPlasm)]));
 			}
 		}
@@ -968,7 +964,8 @@
 		
 		if (displayGlob === 2) {
 			for ( var i = 0; i < newFacets.length; i++) {
-				simplPlasm = SIMPLICIAL_COMPLEX(newFacets[i].vertices)([[0,1,2]]);
+				//simplPlasm = SIMPLICIAL_COMPLEX(newFacets[i].vertices)([[0,1,2]]);
+				simplPlasm = SIMPLICIAL_COMPLEX(newFacets[i].vertices)(cellsPlasm(newFacets[i].vertices,[newFacets[i]]));
 				steps.push(STRUCT([steps[steps.length - 1], COLOR([0,0,0])(SKELETON(1)(simplPlasm)), COLOR([0,0,1,0.8])(simplPlasm)]));
 			}
 		}
@@ -1166,7 +1163,8 @@
 			}
 			
 			if (displayGlob === 2) {
-				simplPlasm = SIMPLICIAL_COMPLEX(nextFacet.vertices)([[0,1,2]]);
+				//simplPlasm = SIMPLICIAL_COMPLEX(nextFacet.vertices)([[0,1,2]]);
+				simplPlasm = SIMPLICIAL_COMPLEX(nextFacet.vertices)(cellsPlasm(nextFacet.vertices,[nextFacet]));
 				steps.push(STRUCT([steps[steps.length - 1], COLOR([0,0,0])(SKELETON(1)(simplPlasm)), COLOR([1,0,0,0.8])(simplPlasm)]));
 			}
 			
@@ -1194,6 +1192,7 @@
 		}
 		
 		if (displayGlob === 2) {
+			console.log(cellsPlasm(vertices,convexHull));
 			simplPlasm = SIMPLICIAL_COMPLEX(vertices)(cellsPlasm(vertices,convexHull));
 			steps.push(STRUCT([COLOR([0,1,0,0.5])(simplPlasm), COLOR([0,0,0])(SKELETON(1)(simplPlasm))]));
 		}

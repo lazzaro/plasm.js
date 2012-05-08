@@ -34,29 +34,27 @@
   
   p = new Plasm('plasm', 'plasm-inspector');
   fun.PLASM(p);
-  var points = random3D(100, 20, 20, 20);
+  
+  var randPoints = random4DPos(50, 9, 9, 9, 9);
+  var points = [[0, 0, 0, 0], [10, 0, 0, 0], [0, 10, 0, 0], 
+                [10, 10, 0, 0], [0, 0, 10, 0], [10, 0, 10, 0], [0, 10, 10, 0], 
+                [10, 10, 10, 0], [0, 0, 0, 10], [10, 0, 0, 10], [0, 10, 0, 10], 
+                [10, 10, 0, 10], [0, 0, 10, 10], [10, 0, 10, 10], [0, 10, 10, 10], [10, 10, 10, 10]];/*[[0,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1],
+                [1,0,0,0],[1,1,0,0],[1,0,1,0],[0,1,1,0],
+                [1,0,0,1],[0,1,0,1],[0,0,1,1],[1,1,1,0],
+                [1,1,0,1],[1,0,1,1],[0,1,1,1],[1,1,1,1]];*/
+  
+                
+  points = points.concat(randPoints);
+  //randPoints = random4DPos(50, 9, 9, 9, 9);
+  //points = randPoints.concat(points);
+  points.mix();
+  points.mix();
+  points.mix();
+  points.sort(quickhull._utils.comparePoints);
   
   console.log(points);
 
-  var pointsPlasm = new Array();
-
-  var black = [0,0,0];
-
-  var cells = new Array();
-
-  var punto;
-
-  for ( var i = 0; i < points.length; i++) {
-  	cells.push([i]);
-  }
-
-  console.log(cells);
-
-  var s0 = SIMPLICIAL_COMPLEX(points)(cells);
-  var cs0 = COLOR(black)(s0);
-
-  DRAW(cs0);
-  
   var convexHull = quickhull.quickhull(points, 0, 1);
   var vertices = convexHull.vertices;
   var faccia, verticiPlasm;
@@ -69,7 +67,10 @@
   }
   
   convSimpl = SIMPLICIAL_COMPLEX(vertices)(cells);
-  DRAW(STRUCT([COLOR([0,0,0,0.5])(SKELETON(1)(convSimpl)),COLOR([0,1,0,0.5])(convSimpl)]));
+  convSchleg = MAP(schlegel3D(0.2))(T([0,1,2,3])([-10,-10,-10,10])(S([0,1,2,3])([2,2,2,2])(SKELETON(1)(convSimpl))));
+  
+  DRAW(COLOR([0,0,0,0.5])(convSchleg));
+  //DRAW(STRUCT([COLOR([0,0,0,0.5])(SKELETON(1)(convSimpl)),COLOR([0,1,0,0.5])(convSimpl)]));
   </script>
 </body>
 </html>
